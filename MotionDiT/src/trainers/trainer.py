@@ -238,6 +238,7 @@ class Trainer:
         self.loss_logger = open(loss_log, 'a')
 
         self.ckpt_file_list_for_clear = []
+        self.best_loss = float('inf')
 
     def _loss_backward(self, loss):
         self.optim.zero_grad()
@@ -305,9 +306,9 @@ class Trainer:
 
         epoch = self.epoch
 
-        # show all loss
+        avg = DAM.average()
         avg_loss_msg = "|"
-        for k, v in DAM.average().items():
+        for k, v in avg.items():
             avg_loss_msg += " %s: %.6f |" % (k, v)
         msg = f'Epoch: {epoch}, Global_Steps: {self.global_step}, {avg_loss_msg}'
         print(msg, file=self.loss_logger)
@@ -325,6 +326,17 @@ class Trainer:
         ckpt_p = os.path.join(self.ckpt_path, f"train_{epoch}.pt")
         torch.save(ckpt, ckpt_p)
         tqdm.write(f"[MODEL SAVED at Epoch {epoch}] ({len(self.ckpt_file_list_for_clear)})")
+
+        # save best model in .pth format
+        if avg:
+            skip_keys = {'sim_pred', 'best_shift', 'hard_weight',
+                         'eff_lambda1', 'eff_delay_lambda', 'eff_lmk_lambda'}
+            total_loss = sum(v for k, v in avg.items() if k not in skip_keys)
+            if total_loss < getattr(self, 'best_loss', float('inf')):
+                self.best_loss = total_loss
+                best_path = os.path.join(self.ckpt_path, "lmdm_v0.4_hubert.pth")
+                torch.save({"model_state_dict": state_dict}, best_path)
+                tqdm.write(f"[BEST MODEL] Epoch {epoch} loss={total_loss:.6f} -> {best_path}")
         
         # clear model
         if epoch % self.opt.save_ckpt_freq != 0:

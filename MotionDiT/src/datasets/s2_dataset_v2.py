@@ -301,13 +301,13 @@ class Stage2Dataset(Dataset):
             more_cond.append(lmk_seq)
             
         if more_cond:
-            cond_seq = np.concatenate([aud_cond] + more_cond, -1)    # [n, dim_cond]
+            cond_seq = np.concatenate([aud_cond] + more_cond, -1).astype(np.float32)    # [n, dim_cond]
         else:
-            cond_seq = aud_cond
+            cond_seq = aud_cond.astype(np.float32)
 
         data_dict = {
-            'kp_seq': kp_seq,
-            'kp_cond': kp_cond,
+            'kp_seq': kp_seq.astype(np.float32),
+            'kp_cond': kp_cond.astype(np.float32),
             'aud_cond': cond_seq,
             'idx': f'{idx}_{v_idx}_{f_idx}',
         }
